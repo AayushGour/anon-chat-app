@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Clone</title>
+    <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/babel-standalone@6.26.0/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.5/dist/socket.io.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for sliding panel and responsiveness */
+        .upload-panel {
+            transform: translateY(100%);
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .upload-panel.open {
+            transform: translateY(0);
+        }
+
+        @media (max-width: 640px) {
+            .chatroom-list li {
+                font-size: 0.9rem;
+                padding: 0.5rem;
+            }
+
+            .message-input {
+                font-size: 0.9rem;
+            }
+
+            .upload-panel {
+                padding: 1rem;
+            }
+
+            .upload-panel button,
+            .upload-panel label {
+                font-size: 0.9rem;
+                padding: 0.5rem 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const App = () => {
+            const [user, setUser] = useState(null);
+            const [usernameInput, setUsernameInput] = useState('');
+            const [chatroomCode, setChatroomCode] = useState('');
+            const [joinedChatrooms, setJoinedChatrooms] = useState([]);
+            const [joinCode, setJoinCode] = useState('');
+            const [messages, setMessages] = useState([]);
+            const [users, setUsers] = useState([]);
+            const [message, setMessage] = useState('');
+            const [file, setFile] = useState(null);
+            const [showCreatePopup, setShowCreatePopup] = useState(false);
+            const [showUploadPanel, setShowUploadPanel] = useState(false);
+            const [newChatroomCode, setNewChatroomCode] = useState('');
+            const [error, setError] = useState('');
+            const [socket, setSocket] = useState(null);
+
+            useEffect(() => {
+                const newSocket = io('http://localhost:3000');
+                setSocket(newSocket);
+
+                newSocket.on('login', (username) => {
+                    setUser(username);
+                });
+
+                newSocket.on('users', (userList) => {
+                    setUsers(userList);
+                });
+
+                newSocket.on('message', (msg) => {
+                    setMessages((prev) => [...prev, msg]);
+                });
+
+                newSocket.on('chatroomCreated', (code) => {
+                    setShowCreatePopup(false);
+                    setNewChatroomCode('');
+                    setJoinCode(code);
+                    newSocket.emit('joinChatroom', code);
+                });
+
+                newSocket.on('chatroomJoined', ({ code, messages }) => {
+                    setJoinedChatrooms((prev) => [...new Set([...prev, code])]);
+                    setChatroomCode(code);
+                    setMessages(messages);
+                    setError('');
+                });
+
+                newSocket.on('joinedChatrooms', (chatrooms) => {
+                    setJoinedChatrooms(chatrooms);
+                });
+
+                newSocket.on('error', (msg) => {
+                    setError(msg);
+                });
+
+                return () => newSocket.disconnect();
+            }, []);
+
+            const handleLogin = (e) => {
+                e.preventDefault();
+                if (usernameInput.trim()) {
+                    socket.emit('login', usernameInput);
+                }
+            };
+
+            const handleJoinChatroom = (e) => {
+                e.preventDefault();
+                if (joinCode.trim()) {
+                    socket.emit('joinChatroom', joinCode);
+                }
+            };
+
+            const handleCreateChatroom = (e) => {
+                e.preventDefault();
+                socket.emit('createChatroom', { code: newChatroomCode.trim() || null });
+            };
+
+            const handleFileChange = (e) => {
+                const selectedFile = e.target.files[0];
+                if (selectedFile && selectedFile.size <= 5 * 1024 * 1024) {
+                    setFile(selectedFile);
+                    setError('');
+                } else {
+                    setError('File size must be less than 5MB');
+                }
+            };
+
+            const clearFile = () => {
+                setFile(null);
+                document.querySelector('input[type="file"]').value = '';
+            };
+
+            const sendMessage = async (e) => {
+                e.preventDefault();
+                if (chatroomCode) {
+                    if (file) {
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        formData.append('username', user);
+                        formData.append('chatroomCode', chatroomCode);
+                        try {
+                            const response = await fetch('http://localhost:3000/upload', {
+                                method: 'POST',
+                                body: formData,
+                            });
+                            if (!response.ok) {
+                                setError('Failed to upload file');
+                            }
+                            setFile(null);
+                            setShowUploadPanel(false);
+                            e.target.querySelector('input[type="file"]').value = '';
+                        } catch (err) {
+                            setError('Error uploading file');
+                        }
+                    }
+                    if (message.trim()) {
+                        socket.emit('message', { text: message, chatroomCode });
+                        setMessage('');
+                    }
+                }
+            };
+
+            const switchChatroom = (code) => {
+                setChatroomCode(code);
+                socket.emit('joinChatroom', code); // Re-fetch messages for the selected chatroom
+            };
+
+            if (!user) {
+                return (
+                    <div className="flex items-center justify-center h-screen bg-gray-100">
+                        <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+                            <h1 className="text-2xl font-bold mb-4 text-center">Login</h1>
+                            <form onSubmit={handleLogin}>
+                                <input
+                                    type="text"
+                                    value={usernameInput}
+                                    onChange={(e) => setUsernameInput(e.target.value)}
+                                    placeholder="Enter username"
+                                    className="w-full p-2 mb-4 border rounded focus:outline-none focus:ring-2 focus:ring-green-500"
+                                />
+                                <button type="submit" className="w-full bg-green-500 text-white p-2 rounded hover:bg-green-600 transition">
+                                    Login
+                                </button>
+                                {error && <p className="text-red-500 mt-2 text-center">{error}</p>}
+                            </form>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="flex flex-col sm:flex-row h-screen bg-gray-100">
+                    <div className="w-full sm:w-1/4 bg-white border-r sm:border-r sm:min-h-screen overflow-y-auto">
+                        <div className="p-4">
+                            <h2 className="text-xl font-bold mb-4">Chatrooms</h2>
+                            <form onSubmit={handleJoinChatroom} className="mb-4">
+                                <input
+                                    type="text"
+                                    value={joinCode}
+                                    onChange={(e) => setJoinCode(e.target.value)}
+                                    placeholder="Enter chatroom code"
+                                    className="w-full p-2 border rounded mb-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                />
+                                <button type="submit" className="w-full bg-green-500 text-white p-2 rounded hover:bg-green-600 transition">
+                                    Join Chatroom
+                                </button>
+                            </form>
+                            <button
+                                onClick={() => setShowCreatePopup(true)}
+                                className="w-full bg-blue-500 text-white p-2 rounded mb-4 hover:bg-blue-600 transition"
+                            >
+                                Create Chatroom
+                            </button>
+                            <h3 className="text-lg font-semibold mb-2">Joined Chatrooms</h3>
+                            <ul className="chatroom-list max-h-64 sm:max-h-[calc(100vh-16rem)] overflow-y-auto">
+                                {joinedChatrooms.map((code) => (
+                                    <li
+                                        key={code}
+                                        onClick={() => switchChatroom(code)}
+                                        className={`p-2 cursor-pointer rounded ${chatroomCode === code ? 'bg-gray-200' : 'hover:bg-gray-100'
+                                            } transition`}
+                                    >
+                                        {code}
+                                    </li>
+                                ))}
+                            </ul>
+                            {error && <p className="text-red-500 mt-2">{error}</p>}
+                        </div>
+                    </div>
+                    <div className="flex-1 flex flex-col relative">
+                        <div className="bg-green-500 text-white p-4">
+                            <h2 className="text-lg font-bold">
+                                {chatroomCode ? `Chatroom: ${chatroomCode}` : 'Join a chatroom'}
+                            </h2>
+                        </div>
+                        <div className="flex-1 p-4 overflow-y-auto">
+                            {messages
+                                .filter((msg) => msg.chatroomCode === chatroomCode)
+                                .map((msg, index) => (
+                                    <div
+                                        key={index}
+                                        className={`mb-2 ${msg.from === user ? 'text-right' : 'text-left'}`}
+                                    >
+                                        <div
+                                            className={`inline-block p-2 rounded-lg ${msg.from === user ? 'bg-green-200' : 'bg-gray-200'
+                                                } max-w-[80%] sm:max-w-[60%]`}
+                                        >
+                                            <strong>{msg.from}: </strong>
+                                            {msg.type === 'file' ? (
+                                                msg.fileType.startsWith('image/') ? (
+                                                    <img
+                                                        src={`http://localhost:3000/uploads/${msg.fileName}`}
+                                                        alt="Uploaded"
+                                                        className="max-w-full sm:max-w-xs rounded"
+                                                    />
+                                                ) : (
+                                                    <a
+                                                        href={`http://localhost:3000/uploads/${msg.fileName}`}
+                                                        download
+                                                        className="text-blue-500 underline"
+                                                    >
+                                                        {msg.fileName}
+                                                    </a>
+                                                )
+                                            ) : (
+                                                msg.text
+                                            )}
+                                        </div>
+                                        <div className="text-xs text-gray-500">
+                                            {new Date(msg.timestamp).toLocaleTimeString()}
+                                        </div>
+                                    </div>
+                                ))}
+                        </div>
+                        {chatroomCode && (
+                            <div className="p-4 bg-white border-t relative">
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                                    <input
+                                        type="text"
+                                        value={message}
+                                        onChange={(e) => setMessage(e.target.value)}
+                                        placeholder="Type a message"
+                                        className="message-input flex-1 p-2 border rounded sm:rounded-l focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    />
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowUploadPanel(true)}
+                                            className="bg-gray-500 text-white p-2 rounded hover:bg-gray-600 transition"
+                                        >
+                                            📎
+                                        </button>
+                                        <button type="submit" onClick={sendMessage} className="bg-green-500 text-white p-2 rounded sm:rounded-r hover:bg-green-600 transition">
+                                            Send
+                                        </button>
+                                    </div>
+                                </div>
+                                <div
+                                    className={`upload-panel fixed sm:absolute bottom-0 left-0 right-0 bg-white shadow-lg p-6 rounded-t-lg sm:rounded-lg sm:top-auto sm:left-auto sm:right-auto sm:w-96 sm:bottom-16 sm:right-4 transition-transform ${showUploadPanel ? 'open' : ''
+                                        }`}
+                                >
+                                    <h3 className="text-lg font-semibold mb-4">Upload File</h3>
+                                    {file ? (
+                                        <div className="flex items-center justify-between mb-4">
+                                            <span className="text-sm truncate">{file.name}</span>
+                                            <button
+                                                type="button"
+                                                onClick={clearFile}
+                                                className="text-red-500 hover:text-red-700"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <label className="inline-block bg-green-500 text-white px-4 py-2 rounded cursor-pointer hover:bg-green-600 transition mb-4">
+                                            Choose File
+                                            <input
+                                                type="file"
+                                                accept="image/jpeg,image/png,image/gif,application/pdf,.doc,.docx,.txt"
+                                                onChange={handleFileChange}
+                                                className="hidden"
+                                            />
+                                        </label>
+                                    )}
+                                    <div className="flex justify-end gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowUploadPanel(false)}
+                                            className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition"
+                                        >
+                                            Close
+                                        </button>
+                                        {file && (
+                                            <button
+                                                type="button"
+                                                onClick={sendMessage}
+                                                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
+                                            >
+                                                Upload
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {showCreatePopup && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+                                <h2 className="text-xl font-bold mb-4">Create Chatroom</h2>
+                                <form onSubmit={handleCreateChatroom}>
+                                    <input
+                                        type="text"
+                                        value={newChatroomCode}
+                                        onChange={(e) => setNewChatroomCode(e.target.value)}
+                                        placeholder="Enter chatroom code (optional)"
+                                        className="w-full p-2 border rounded mb-4 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    />
+                                    <div className="flex justify-end gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowCreatePopup(false)}
+                                            className="bg-gray-500 text-white p-2 rounded hover:bg-gray-600 transition"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button type="submit" className="bg-green-500 text-white p-2 rounded hover:bg-green-600 transition">
+                                            Create
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+
+</html>
