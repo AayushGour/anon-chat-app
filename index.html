@@ -46,8 +46,11 @@
 
 <body>
     <div id="root"></div>
+    <script src="/env.js"></script>
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
+
+        const apiUrl = window.env.REACT_APP_API_URL
 
         const App = () => {
             const [user, setUser] = useState(null);
@@ -69,7 +72,7 @@
             const messsagesContainerRef = useRef();
 
             useEffect(() => {
-                const newSocket = io('http://localhost:3000');
+                const newSocket = io(apiUrl);
                 setSocket(newSocket);
 
                 newSocket.on('login', (username) => {
@@ -156,7 +159,7 @@
                         formData.append('username', user);
                         formData.append('chatroomCode', chatroomCode);
                         try {
-                            const response = await fetch('http://localhost:3000/upload', {
+                            const response = await fetch(`${apiUrl}/upload`, {
                                 method: 'POST',
                                 body: formData,
                             });
@@ -275,13 +278,13 @@
                                             {msg.type === 'file' ? (
                                                 msg.fileType.startsWith('image/') ? (
                                                     <img
-                                                        src={`http://localhost:3000/uploads/${msg.fileName}`}
+                                                        src={`${apiUrl}/uploads/${msg.fileName}`}
                                                         alt="Uploaded"
                                                         className="max-w-full sm:max-w-xs rounded"
                                                     />
                                                 ) : (
                                                     <a
-                                                        href={`http://localhost:3000/uploads/${msg.fileName}`}
+                                                        href={`${apiUrl}/uploads/${msg.fileName}`}
                                                         download
                                                         className="text-blue-500 underline"
                                                     >

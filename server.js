@@ -6,6 +6,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const chatSocket = require('./sockets/chat');
+require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
@@ -19,6 +20,9 @@ const io = socketIo(server, {
 app.use(cors());
 app.use(express.static(__dirname));
 app.use('/uploads', express.static(path.join(__dirname, 'Uploads')));
+
+const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || 3000;
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -94,6 +98,13 @@ app.post('/upload', (req, res, next) => {
     });
 });
 
-server.listen(3000, () => {
-    console.log('Server running on http://localhost:3000');
+app.get('/env.js', (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript');
+    res.send(`window.env = ${JSON.stringify({
+        REACT_APP_API_URL: process.env.REACT_APP_API_URL || 'http://localhost:3000',
+    })};`);
+});
+
+server.listen(PORT, HOST, () => {
+    console.log(`Server running on ${HOST}:${PORT}`);
 });
