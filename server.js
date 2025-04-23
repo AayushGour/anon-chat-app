@@ -98,13 +98,6 @@ app.post('/upload', (req, res, next) => {
     });
 });
 
-app.get('/env.js', (req, res) => {
-    res.setHeader('Content-Type', 'application/javascript');
-    res.send(`window.env = ${JSON.stringify({
-        REACT_APP_API_URL: process.env.REACT_APP_API_URL || 'http://localhost:3000',
-    })};`);
-});
-
 server.listen(PORT, HOST, () => {
     console.log(`Server running on ${HOST}:${PORT}`);
 });
