@@ -58,8 +58,11 @@ const chatrooms = new Map(); // Map of chatroom code to { users: [], messages: [
 const userChatrooms = new Map(); // Map of username to array of chatroom codes
 const usernames = new Set(); // Track used usernames
 
+const HOME_CHATROOM = 'home';
+chatrooms.set(HOME_CHATROOM, { users: [], messages: [] });
+
 // Initialize Socket.IO logic
-chatSocket(io, chatrooms, userChatrooms, usernames);
+chatSocket(io, chatrooms, userChatrooms, usernames, HOME_CHATROOM);
 
 // File upload route with improved error handling
 app.post('/upload', (req, res, next) => {

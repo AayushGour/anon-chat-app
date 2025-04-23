@@ -1,6 +1,25 @@
-module.exports = (io, chatrooms, userChatrooms, usernames) => {
+module.exports = (io, chatrooms, userChatrooms, usernames, HOME_CHATROOM) => {
     function generateChatroomCode() {
         return Math.random().toString(36).substring(2, 8).toUpperCase();
+    }
+
+    function joinChatroom(socket, chatroomCode) {
+        if (chatrooms.has(chatroomCode)) {
+            const userChatroomList = userChatrooms.get(socket.username) || [];
+            if (!userChatroomList.includes(chatroomCode)) {
+                userChatroomList.push(chatroomCode);
+                userChatrooms.set(socket.username, userChatroomList);
+                chatrooms.get(chatroomCode).users.push(socket.username);
+                socket.join(chatroomCode);
+                socket.emit('chatroomJoined', { code: chatroomCode, messages: chatrooms.get(chatroomCode).messages });
+                socket.emit('joinedChatrooms', userChatroomList);
+                io.to(chatroomCode).emit('users', chatrooms.get(chatroomCode).users);
+            } else {
+                socket.emit('chatroomJoined', { code: chatroomCode, messages: chatrooms.get(chatroomCode).messages });
+            }
+        } else {
+            socket.emit('error', 'Invalid chatroom code');
+        }
     }
 
     io.on('connection', (socket) => {
@@ -11,7 +30,13 @@ module.exports = (io, chatrooms, userChatrooms, usernames) => {
             }
             usernames.add(username);
             socket.username = username;
-            userChatrooms.set(username, []);
+
+            // Add user to the home chatroom
+            if (!userChatrooms.has(username)) {
+                userChatrooms.set(username, []);
+            }
+            joinChatroom(socket, HOME_CHATROOM);
+
             socket.emit('login', username);
             io.emit('users', Array.from(new Set([...userChatrooms.keys()])));
         });
@@ -27,22 +52,7 @@ module.exports = (io, chatrooms, userChatrooms, usernames) => {
         });
 
         socket.on('joinChatroom', (code) => {
-            if (chatrooms.has(code)) {
-                const userChatroomList = userChatrooms.get(socket.username) || [];
-                if (!userChatroomList.includes(code)) {
-                    userChatroomList.push(code);
-                    userChatrooms.set(socket.username, userChatroomList);
-                    chatrooms.get(code).users.push(socket.username);
-                    socket.join(code);
-                    socket.emit('chatroomJoined', { code, messages: chatrooms.get(code).messages });
-                    socket.emit('joinedChatrooms', userChatroomList);
-                    io.to(code).emit('users', chatrooms.get(code).users);
-                } else {
-                    socket.emit('chatroomJoined', { code, messages: chatrooms.get(code).messages });
-                }
-            } else {
-                socket.emit('error', 'Invalid chatroom code');
-            }
+            joinChatroom(socket, code);
         });
 
         socket.on('message', ({ text, chatroomCode }) => {

@@ -1,7 +1,7 @@
 {
-    "name": "whatsapp-clone",
+    "name": "chatrooms-app",
     "version": "1.0.0",
-    "description": "Minimalistic WhatsApp clone",
+    "description": "Minimalistic Chatroom app for anonmous chatting",
     "main": "server.js",
     "scripts": {
         "start": "node server.js"
