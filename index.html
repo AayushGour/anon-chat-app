@@ -90,6 +90,7 @@
 
                 newSocket.on('chatroomJoined', ({ code, messages }) => {
                     setJoinedChatrooms((prev) => [...new Set([...prev, code])]);
+                    setJoinCode("")
                     setChatroomCode(code);
                     setMessages(messages);
                     setError('');
@@ -238,9 +239,12 @@
                         </div>
                     </div>
                     <div className="flex-1 flex flex-col relative">
-                        <div className="bg-green-500 text-white p-4">
+                        <div className="bg-green-500 text-white p-4 flex flex-row justify-between">
                             <h2 className="text-lg font-bold">
                                 {chatroomCode ? `Chatroom: ${chatroomCode}` : 'Join a chatroom'}
+                            </h2>
+                            <h2 className="text-lg font-bold">
+                                {user ? user : ''}
                             </h2>
                         </div>
                         <div className="flex-1 p-4 overflow-y-auto">
@@ -252,10 +256,10 @@
                                         className={`mb-2 ${msg.from === user ? 'text-right' : 'text-left'}`}
                                     >
                                         <div
-                                            className={`inline-block p-2 rounded-lg ${msg.from === user ? 'bg-green-200' : 'bg-gray-200'
+                                            className={`inline-flex flex-col gap-1 p-3 rounded-lg ${msg.from === user ? 'bg-green-200' : 'bg-gray-200'
                                                 } max-w-[80%] sm:max-w-[60%]`}
                                         >
-                                            <strong>{msg.from}: </strong>
+                                            <strong>{msg.from}</strong>
                                             {msg.type === 'file' ? (
                                                 msg.fileType.startsWith('image/') ? (
                                                     <img
