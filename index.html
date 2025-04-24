@@ -85,6 +85,9 @@
 
                 newSocket.on('message', (msg) => {
                     setMessages((prev) => [...prev, msg]);
+                    setTimeout(() => {
+                        messsagesContainerRef.current.scrollTop = messsagesContainerRef.current.scrollHeight || 99999;
+                    }, 10)
                 });
 
                 newSocket.on('chatroomCreated', (code) => {
@@ -147,7 +150,7 @@
 
             const clearFile = () => {
                 setFile(null);
-                document.querySelector('input[type="file"]').value = '';
+                document.getElementById("file-upload-input").value = "";
             };
 
             const sendMessage = async (e) => {
@@ -344,6 +347,7 @@
                                         <label className="inline-block bg-green-500 text-white px-4 py-2 rounded cursor-pointer hover:bg-green-600 transition mb-4">
                                             Choose File
                                             <input
+                                                id="file-upload-input"
                                                 type="file"
                                                 accept="image/jpeg,image/png,image/gif,application/pdf,.doc,.docx,.txt"
                                                 onChange={handleFileChange}
