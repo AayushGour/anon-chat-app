@@ -18,3 +18,4 @@ Keeps no trace of chats, once it's redeployed
 - Add logging
 - Add Error handling
 - Auto focus on input fields
+- States resetting on page refresh or navigating to other apps/tabs
