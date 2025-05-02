@@ -18,8 +18,9 @@ const io = socketIo(server, {
 });
 
 app.use(cors());
-app.use(express.static(__dirname));
+// app.use(express.static(__dirname));
 app.use('/uploads', express.static(path.join(__dirname, 'Uploads')));
+app.use(express.static(path.join(__dirname, 'frontend/dist')));
 
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || 3000;

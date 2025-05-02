@@ -16,6 +16,7 @@ module.exports = (io, chatrooms, userChatrooms, usernames, HOME_CHATROOM) => {
                 io.to(chatroomCode).emit('users', chatrooms.get(chatroomCode).users);
             } else {
                 socket.emit('chatroomJoined', { code: chatroomCode, messages: chatrooms.get(chatroomCode).messages });
+                io.to(chatroomCode).emit('users', chatrooms.get(chatroomCode).users);
             }
         } else {
             socket.emit('error', 'Invalid chatroom code');
@@ -40,6 +41,22 @@ module.exports = (io, chatrooms, userChatrooms, usernames, HOME_CHATROOM) => {
             socket.emit('login', username);
             io.emit('users', Array.from(new Set([...userChatrooms.keys()])));
         });
+
+        socket.on("logout", (username) => {
+            if (usernames.has(username)) {
+                usernames.delete(username);
+                socket.username = null;
+                const userChatroomList = userChatrooms.get(username) || [];
+                userChatroomList.forEach((code) => {
+                    if (chatrooms.has(code)) {
+                        chatrooms.get(code).users = chatrooms.get(code).users.filter((u) => u !== username);
+                        io.to(code).emit('users', chatrooms.get(code).users);
+                    }
+                });
+                userChatrooms.delete(username);
+                io.emit('users', Array.from(new Set([...userChatrooms.keys()])));
+            }
+        })
 
         socket.on('createChatroom', ({ code }) => {
             const chatroomCode = code || generateChatroomCode();
