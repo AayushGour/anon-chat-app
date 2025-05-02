@@ -18,7 +18,6 @@ const HomePageComponent = () => {
     const roomCode = searchParams.get("room");
 
     useEffect(() => {
-        console.log(messsagesContainerRef.current)
         if (messsagesContainerRef?.current) {
             setTimeout(() => {
                 messsagesContainerRef.current.scrollTop = messsagesContainerRef.current?.scrollHeight || 99999;
@@ -27,21 +26,24 @@ const HomePageComponent = () => {
     }, [messages])
 
     useEffect(() => {
-        if (!!user) {
+        if (!!user && !roomCode) {
             socket.emit('login', user)
+        } else if (user && roomCode) {
+            socket?.emit('joinChatroom', roomCode);
         } else {
             navigate(`${routeConfig.LOGIN.path}${roomCode ? `?room=${roomCode}` : ""}`)
         }
         return () => {
             setError("")
         }
-    }, [])
-
-    useEffect(() => {
-        if (user && roomCode) {
-            socket?.emit('joinChatroom', roomCode);
-        }
     }, [searchParams])
+
+    // useEffect(() => {
+    //     console.log(user, roomCode)
+    //     if (roomCode) {
+    //         socket?.emit('joinChatroom', roomCode);
+    //     }
+    // }, [searchParams])
 
 
 

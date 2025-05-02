@@ -12,7 +12,9 @@ const LoginComponent = () => {
         socket?.on('login', (username) => {
             localStorage.setItem("username", username);
             const room = searchParams.get("room") || "home";
-            navigate(`${routeConfig.HOME.path}?room=${room}`);
+            setTimeout(() => {
+                navigate(`${routeConfig.HOME.path}?room=${room}`);
+            }, 500);
         })
         socket?.on('error', (msg) => {
             setError(msg);
