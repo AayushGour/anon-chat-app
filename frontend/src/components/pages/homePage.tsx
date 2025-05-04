@@ -138,13 +138,13 @@ const HomePageComponent = () => {
             </div>
             {roomCode && (
                 <div className="bg-white relative">
-                    <form onSubmit={sendMessage} className="flex flex-row sm:flex-row sm:items-center gap-2 mb-2 p-4">
+                    <form onSubmit={sendMessage} className="flex flex-row sm:flex-row sm:items-center gap-2 mb-2 p-4 overflow-hidden w-full">
                         <input
                             type="text"
                             value={message}
                             onChange={(e) => setMessage(e.target.value)}
                             placeholder="Type a message"
-                            className="message-input flex-1 p-2 border rounded sm:rounded-l focus:outline-none focus:ring-2 focus:ring-green-500"
+                            className="message-input flex-1 p-2 border rounded sm:rounded-l focus:outline-none focus:ring-2 focus:ring-green-500 min-w-1/2"
                         />
                         <div className="flex gap-2">
                             <button

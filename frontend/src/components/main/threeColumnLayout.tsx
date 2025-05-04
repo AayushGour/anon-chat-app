@@ -68,7 +68,7 @@ const ThreeColumnLayoutComponent = () => {
                     </div>
                 </div>
                 <div className="flex flex-row w-full flex-1 relative overflow-hidden">
-                    <div className="main-content flex-grow"><Outlet context={{ messages }} /></div>
+                    <div className="main-content flex-grow overflow-hidden"><Outlet context={{ messages }} /></div>
                     <RightSidebarComponent showRightSidebar={showRightSidebar} setShowRightSidebar={setShowRightSidebar} />
                 </div>
             </div>
